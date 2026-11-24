@@ -16,6 +16,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+# Local loopback UI server never uses TLS; allow frozen EXE builds to omit OpenSSL binaries.
+if getattr(sys, "frozen", False) and "ssl" not in sys.modules:
+    import types
+
+    sys.modules["ssl"] = types.ModuleType("ssl")
+
 import cv2
 import numpy as np
 import webview
