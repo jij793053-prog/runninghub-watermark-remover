@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RunningHub Clear Studio · 无损去水印工作台</title>
+<style>
+  :root {
+    --bg: #090B10;
+    --bg-elev: rgba(255, 255, 255, 0.032);
+    --bg-elev-hi: rgba(255, 255, 255, 0.055);
+    --bg-sunken: rgba(5, 7, 11, 0.72);
+    --line: rgba(255, 255, 255, 0.075);
+    --line-soft: rgba(255, 255, 255, 0.045);
+    --line-accent: rgba(96, 165, 250, 0.45);
+    --text: #F1F5F9;
+    --text-2: #B8C1D1;
+    --text-3: #7A8499;
+    --accent: #3B82F6;
+    --accent-2: #6366F1;
+    --accent-glow: rgba(59, 130, 246, 0.18);
+    --ok: #34D399;
+    --ok-bg: rgba(52, 211, 153, 0.12);
+    --ok-line: rgba(52, 211, 153, 0.30);
+    --sky: #38BDF8;
+    --sky-bg: rgba(56, 189, 248, 0.12);
+    --sky-line: rgba(56, 189, 248, 0.30);
+    --warn: #FBBF24;
+    --warn-bg: rgba(251, 191, 36, 0.12);
+    --warn-line: rgba(251, 191, 36, 0.30);
+    --err: #F87171;
+    --err-bg: rgba(248, 113, 113, 0.12);
+    --err-line: rgba(248, 113, 113, 0.30);
+    --radius: 14px;
+    --radius-sm: 9px;
+    --font-sans: "Segoe UI Variable", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background:
+      radial-gradient(75% 55% at 10% 0%, rgba(59, 130, 246, 0.10), transparent 60%),
+      radial-gradient(55% 45% at 92% 6%, rgba(139, 92, 246, 0.08), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.11); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 12px 16px 14px;
+    gap: 12px;
+  }
+
+  /* ---------- Top Header ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 30px -20px rgba(0,0,0,0.8);
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+  }
+  .brand-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.24), rgba(99,102,241,0.24));
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 22px -6px rgba(59, 130, 246, 0.65);
+  }
+  .brand-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-name {
+    font-size: 14.5px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--text);
+  }
+  .engine-chip {
+    font-size: 11px;
+    font-weight: 600;
+    color: #93C5FD;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.13);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    font-family: var(--font-mono);
+  }
+  .brand-sub {
+    font-size: 11.5px;
+    color: var(--text-3);
+    margin-top: 1px;
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .out-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+  }
+  .out-seg {
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .out-seg:hover { color: var(--text-2); }
+  .out-seg.active {
+    background: rgba(59, 130, 246, 0.18);
+    color: #BFDBFE;
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.30);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.035);
+    color: var(--text-2);
+    font-size: 12.5px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.16);
+    color: var(--text);
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: rgba(147, 197, 253, 0.38);
+    color: #FFFFFF;
+    box-shadow: 0 6px 20px -8px rgba(59, 130, 246, 0.75);
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+    border-color: rgba(191, 219, 254, 0.55);
+    color: #FFFFFF;
+  }
+  .btn-ghost-danger:hover:not(:disabled) {
+    background: var(--err-bg);
+    border-color: var(--err-line);
+    color: var(--err);
+  }
+
+  /* ---------- Main Workspace Split ---------- */
+  .workspace {
+    display: grid;
+    grid-template-columns: 356px minmax(0, 1fr);
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--bg-elev-hi), var(--bg-elev));
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 18px 40px -28px rgba(0,0,0,0.85);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ---------- Left Sidebar ---------- */
+  .sidebar { padding: 12px; gap: 10px; }
+
+  .dropzone {
+    position: relative;
+    border: 1.5px dashed rgba(96, 165, 250, 0.28);
+    border-radius: 12px;
+    background:
+      radial-gradient(90% 90% at 50% 0%, rgba(59, 130, 246, 0.08), transparent 70%),
+      var(--bg-sunken);
+    padding: 16px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .dropzone:hover {
+    border-color: rgba(96, 165, 250, 0.52);
+    background:
+      radial-gradient(90% 90% at 50% 0%, rgba(59, 130, 246, 0.13), transparent 70%),
+      var(--bg-sunken);
+  }
+  .dropzone.drag-active {
+    border-color: #60A5FA;
+    border-style: solid;
+    background:
+      radial-gradient(100% 100% at 50% 50%, rgba(59, 130, 246, 0.22), transparent 80%),
+      rgba(15, 23, 42, 0.85);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), 0 12px 30px -12px rgba(59, 130, 246, 0.5);
+    transform: translateY(-1px);
+  }
+  .drop-icon {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 8px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #93C5FD;
+  }
+  .drop-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .drop-sub { font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
+
+  .toggles-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    border: 1px solid var(--line-soft);
+    flex-shrink: 0;
+  }
+  .toggle-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .switch {
+    position: relative;
+    width: 30px;
+    height: 17px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: all 0.18s ease;
+    flex-shrink: 0;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 1.5px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #CBD5E1;
+    transition: all 0.18s ease;
+  }
+  .toggle-item.on .switch {
+    background: rgba(59, 130, 246, 0.45);
+    border-color: rgba(96, 165, 250, 0.6);
+  }
+  .toggle-item.on .switch::after {
+    transform: translateX(12px);
+    background: #FFFFFF;
+  }
+
+  .queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 2px 0;
+    font-size: 11.5px;
+    color: var(--text-3);
+    flex-shrink: 0;
+  }
+  .queue-count {
+    font-family: var(--font-mono);
+    color: var(--text-2);
+  }
+
+  .queue-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 2px;
+  }
+  .queue-empty {
+    margin: auto;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 12px;
+    padding: 24px 12px;
+  }
+
+  .q-item {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 9px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.022);
+    border: 1px solid var(--line-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .q-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .q-item.selected {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.14), rgba(99, 102, 241, 0.06));
+    border-color: rgba(96, 165, 250, 0.50);
+    box-shadow: 0 4px 16px -10px rgba(59, 130, 246, 0.65);
+  }
+
+  .q-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 7px;
+    object-fit: cover;
+    background: #05070B;
+    border: 1px solid var(--line);
+  }
+  .q-meta { min-width: 0; }
+  .q-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .q-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .q-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+  }
+  .badge {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .badge-queued { color: var(--text-3); background: rgba(255,255,255,0.05); border-color: var(--line); }
+  .badge-processing {
+    color: #93C5FD;
+    background: rgba(59, 130, 246, 0.16);
+    border-color: rgba(96, 165, 250, 0.35);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .badge-mode-a { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-line); }
+  .badge-mode-b { color: var(--sky); background: var(--sky-bg); border-color: var(--sky-line); }
+  .badge-skipped { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-line); }
+  .badge-error { color: var(--err); background: var(--err-bg); border-color: var(--err-line); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  .q-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0.65;
+    transition: opacity 0.15s;
+  }
+  .q-item:hover .q-actions, .q-item.selected .q-actions { opacity: 1; }
+  .icon-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); border-color: var(--line); }
+  .icon-btn.del:hover { background: var(--err-bg); color: var(--err); border-color: var(--err-line); }
+
+  .sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+    flex-shrink: 0;
+  }
+  .prog-track {
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+    overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3B82F6, #8B5CF6, #34D399);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+  .footer-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+  }
+  .btn-run { width: 100%; height: 36px; font-size: 13px; font-weight: 650; }
+
+  /* ---------- Right Stage ---------- */
+  .stage { padding: 12px 14px 14px; gap: 10px; }
+
+  .stage-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-soft);
+    flex-shrink: 0;
+  }
+  .stage-info {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .stage-title {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+  }
+  .stage-detail {
+    font-size: 11.5px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 360px;
+  }
+
+  .stage-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .seg-group {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+    gap: 2px;
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 12px;
+    font-weight: 550;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .seg-btn:hover:not(:disabled) { color: var(--text-2); }
+  .seg-btn.active {
+    background: rgba(59, 130, 246, 0.20);
+    color: #DBEAFE;
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
+  }
+  .seg-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .stage-canvas {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: 12px;
+    background:
+      radial-gradient(60% 60% at 50% 50%, rgba(59, 130, 246, 0.045), transparent 75%),
+      repeating-conic-gradient(rgba(255,255,255,0.018) 0% 25%, rgba(0,0,0,0.12) 0% 50%) 0 0 / 20px 20px,
+      #05070B;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 14px;
+  }
+
+  .welcome-box {
+    max-width: 480px;
+    text-align: center;
+    padding: 28px 24px;
+    border-radius: 16px;
+    background: rgba(15, 20, 30, 0.65);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+  }
+  .welcome-orb {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(139,92,246,0.22));
+    border: 1px solid rgba(96, 165, 250, 0.38);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #93C5FD;
+    box-shadow: 0 0 36px -8px rgba(59, 130, 246, 0.55);
+  }
+  .welcome-box h2 { font-size: 16px; font-weight: 650; margin-bottom: 6px; }
+  .welcome-box p { font-size: 12.5px; color: var(--text-3); line-height: 1.65; }
+  .welcome-chips {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 18px;
+  }
+  .w-chip {
+    font-size: 11.5px;
+    color: var(--text-2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+  }
+
+  /* ---------- Interactive Wipe Comparator ---------- */
+  .compare-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.08);
+    cursor: ew-resize;
+    --split: 50%;
+  }
+  .compare-wrap.single-mode { cursor: default; }
+  .img-base {
+    display: block;
+    max-width: 100%;
+    max-height: calc(100vh - 178px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .img-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    clip-path: inset(0 calc(100% - var(--split)) 0 0);
+    pointer-events: none;
+  }
+
+  .split-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--split);
+    width: 2px;
+    background: linear-gradient(180deg, rgba(96,165,250,0.4), #FFFFFF, rgba(96,165,250,0.4));
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.9);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .split-handle {
+    position: absolute;
+    top: 50%;
+    left: var(--split);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65), 0 0 18px rgba(59, 130, 246, 0.55);
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    pointer-events: none;
+  }
+
+  .corner-tag {
+    position: absolute;
+    top: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(9, 11, 16, 0.78);
+    border: 1px solid rgba(255,255,255,0.14);
+    backdrop-filter: blur(8px);
+    color: var(--text);
+    pointer-events: none;
+  }
+  .corner-tag.left { left: 10px; color: #FDE68A; }
+  .corner-tag.right { right: 10px; color: #6EE7B7; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 22px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    color: var(--text);
+    font-size: 12.5px;
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.75);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 99;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Full-window drag overlay when dragging from Explorer */
+  .window-drop-veil {
+    position: fixed;
+    inset: 10px;
+    border-radius: 16px;
+    border: 2px dashed #60A5FA;
+    background: rgba(9, 13, 24, 0.78);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .window-drop-veil.active { display: flex; }
+  .window-drop-veil strong { font-size: 17px; color: #EFF6FF; }
+  .window-drop-veil span { font-size: 12.5px; color: #93C5FD; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="url(#lg1)"/>
+          <defs>
+            <linearGradient id="lg1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#93C5FD"/>
+              <stop offset="1" stop-color="#A78BFA"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title-row">
+          <span class="brand-name">RunningHub 无损去水印工作台</span>
+          <span class="engine-chip">Alpha + Subpixel</span>
+        </div>
+        <div class="brand-sub">支持拖拽单图 / 多图 / 文件夹 · 原图自动无损逆混合，JPG/WebP 自动亚像素对齐修复</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="out-pill" title="输出图片保存位置">
+        <button id="btnOutSame" class="out-seg active" onclick="setOutSame()">保存至原图同目录</button>
+        <button id="btnOutCustom" class="out-seg" onclick="pickOutDir()">自定义输出目录</button>
+      </div>
+      <button class="btn" onclick="pickFiles()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        添加图片
+      </button>
+      <button class="btn" onclick="pickFolder()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        添加文件夹
+      </button>
+      <button class="btn btn-ghost-danger" onclick="clearQueue()">清空列表</button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="workspace">
+    <!-- Left Sidebar -->
+    <aside class="card sidebar">
+      <div id="dropzone" class="dropzone" onclick="pickFiles()">
+        <div class="drop-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="drop-title">把 RunningHub 图片拖到这里</div>
+        <div class="drop-sub">支持 PNG / JPG / WebP / BMP / TIF · 点击选择文件</div>
+      </div>
+
+      <div class="toggles-strip">
+        <div id="togAutoRun" class="toggle-item on" onclick="toggleOption('autoRun')">
+          <div class="switch"></div>
+          <span>拖入即自动处理</span>
+        </div>
+        <div id="togSkipDone" class="toggle-item on" onclick="toggleOption('skipDone')">
+          <div class="switch"></div>
+          <span>跳过 _去水印</span>
+        </div>
+      </div>
+
+      <div class="queue-head">
+        <span>待处理队列</span>
+        <span id="queueCount" class="queue-count">0 项</span>
+      </div>
+
+      <div id="queueList" class="queue-list">
+        <div class="queue-empty">暂无图片，拖入或点击上方添加</div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="prog-track"><div id="progFill" class="prog-fill"></div></div>
+        <div class="footer-stats">
+          <span id="statLeft">就绪</span>
+          <span id="statRight">0 / 0</span>
+        </div>
+        <button id="btnRunAll" class="btn btn-primary btn-run" onclick="runAll()" disabled>开始处理队列</button>
+      </div>
+    </aside>
+
+    <!-- Right Preview & Compare Stage -->
+    <main class="card stage">
+      <div class="stage-bar">
+        <div class="stage-info">
+          <span id="stageTitle" class="stage-title">效果对比预览区</span>
+          <span id="stageBadge" class="badge badge-queued" style="display:none;"></span>
+          <span id="stageDetail" class="stage-detail"></span>
+        </div>
+
+        <div class="stage-controls">
+          <div class="seg-group">
+            <button id="vmZoom" class="seg-btn active" onclick="setViewMode('zoom')">水印特写对比</button>
+            <button id="vmFull" class="seg-btn" onclick="setViewMode('full')">全图对比</button>
+            <button id="vmClean" class="seg-btn" onclick="setViewMode('clean')">去水印后</button>
+            <button id="vmOrig" class="seg-btn" onclick="setViewMode('orig')">原图</button>
+          </div>
+          <button id="btnOpenFile" class="btn" onclick="openSelectedFile()" disabled>打开成品</button>
+          <button id="btnOpenDir" class="btn" onclick="openSelectedFolder()" disabled>打开目录</button>
+        </div>
+      </div>
+
+      <div id="stageCanvas" class="stage-canvas">
+        <div id="welcomeBox" class="welcome-box">
+          <div class="welcome-orb">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="#93C5FD"/>
+            </svg>
+          </div>
+          <h2>拖入任意 RunningHub 图片即可无损去水印</h2>
+          <p>
+            系统会自动识别图像类型：对原图 PNG 直接利用 Alpha 通道逐像素数学逆混合还原，保留 100% 原始画质与画布纹理；对压缩后的 JPG/WebP 自动匹配定位并精准修补。
+          </p>
+          <div class="welcome-chips">
+            <span class="w-chip">✓ 不改原图 · 自动生成 _去水印.png</span>
+            <span class="w-chip">✓ 最高支持 8K/50MB+ 大图</span>
+            <span class="w-chip">✓ 支持滑块局部特写对比</span>
+          </div>
+          <button class="btn btn-primary" onclick="pickFiles()">选择图片开始体验</button>
+        </div>
+
+        <div id="compareWrap" class="compare-wrap" style="display:none;">
+          <img id="imgBase" class="img-base" alt="preview" draggable="false" />
+          <img id="imgOverlay" class="img-overlay" alt="original" draggable="false" />
+          <div id="splitLine" class="split-line"></div>
+          <div id="splitHandle" class="split-handle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="9 18 3 12 9 6"/>
+              <polyline points="15 6 21 12 15 18"/>
+            </svg>
+          </div>
+          <span id="tagLeft" class="corner-tag left">原图 (含水印)</span>
+          <span id="tagRight" class="corner-tag right">去水印后</span>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="dropVeil" class="window-drop-veil">
+  <strong>松开鼠标，立即导入图片</strong>
+  <span>支持单图、多图同时拖入</span>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+  const state = {
+    items: [],
+    selectedId: null,
+    viewMode: 'zoom', // 'zoom' | 'full' | 'clean' | 'orig'
+    splitPct: 50,
+    autoRun: true,
+    skipDone: true,
+    outDir: null,
+    isRunning: false,
+  };
+
+  function api() {
+    return window.pywebview && window.pywebview.api;
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  function setDragActive(on) {
+    document.getElementById('dropzone').classList.toggle('drag-active', on);
+    document.getElementById('dropVeil').classList.toggle('active', on);
+  }
+
+  // Visual drag highlight (actual file paths handled via pywebview DOMEventHandler on drop)
+  let dragDepth = 0;
+  document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragDepth++;
+    setDragActive(true);
+  });
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+  document.addEventListener('dragleave', (e) => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) setDragActive(false);
+  });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragDepth = 0;
+    setDragActive(false);
+  });
+
+  // Wipe slider interaction
+  const compareWrap = document.getElementById('compareWrap');
+  let draggingSplit = false;
+  function updateSplitFromClientX(clientX) {
+    const rect = compareWrap.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    state.splitPct = pct;
+    compareWrap.style.setProperty('--split', pct.toFixed(2) + '%');
+  }
+  compareWrap.addEventListener('pointerdown', (e) => {
+    if (state.viewMode !== 'zoom' && state.viewMode !== 'full') return;
+    draggingSplit = true;
+    compareWrap.setPointerCapture(e.pointerId);
+    updateSplitFromClientX(e.clientX);
+  });
+  compareWrap.addEventListener('pointermove', (e) => {
+    if (!draggingSplit) return;
+    updateSplitFromClientX(e.clientX);
+  });
+  compareWrap.addEventListener('pointerup', () => { draggingSplit = false; });
+  compareWrap.addEventListener('dblclick', () => {
+    state.splitPct = 50;
+    compareWrap.style.setProperty('--split', '50%');
+  });
+
+  // Actions calling Python backend
+  async function pickFiles() {
+    if (!api()) return;
+    await api().pick_files();
+  }
+  async function pickFolder() {
+    if (!api()) return;
+    await api().pick_folder();
+  }
+  async function pickOutDir() {
+    if (!api()) return;
+    await api().pick_out_dir();
+  }
+  async function setOutSame() {
+    if (!api()) return;
+    await api().set_out_dir(null);
+  }
+  async function clearQueue() {
+    if (!api()) return;
+    await api().clear_queue();
+  }
+  async function removeItem(id, ev) {
+    if (ev) ev.stopPropagation();
+    if (!api()) return;
+    await api().remove_item(id);
+  }
+  async function runAll() {
+    if (!api()) return;
+    await api().start_all();
+  }
+  async function toggleOption(key) {
+    state[key] = !state[key];
+    document.getElementById(key === 'autoRun' ? 'togAutoRun' : 'togSkipDone')
+      .classList.toggle('on', state[key]);
+    if (api()) await api().set_options(state.autoRun, state.skipDone);
+  }
+  async function openSelectedFile() {
+    if (!api() || !state.selectedId) return;
+    await api().open_output_file(state.selectedId);
+  }
+  async function openSelectedFolder() {
+    if (!api() || !state.selectedId) return;
+    await api().open_folder(state.selectedId);
+  }
+  async function openItemFolder(id, ev) {
+    if (ev) ev.stopPropagation();
+    if (!api()) return;
+    await api().open_folder(id);
+  }
+
+  function selectItem(id) {
+    state.selectedId = id;
+    render();
+  }
+  function setViewMode(mode) {
+    state.viewMode = mode;
+    renderStage();
+  }
+
+  function statusBadgeHtml(it) {
+    if (it.status === 'queued') return '<span class="badge badge-queued">等待中</span>';
+    if (it.status === 'processing') return '<span class="badge badge-processing">处理中</span>';
+    if (it.status === 'done') {
+      return it.mode === 'Mode-A'
+        ? '<span class="badge badge-mode-a">Alpha 无损</span>'
+        : '<span class="badge badge-mode-b">模板修补</span>';
+    }
+    if (it.status === 'skipped') return '<span class="badge badge-skipped">无水印跳过</span>';
+    return '<span class="badge badge-error">失败</span>';
+  }
+
+  function render() {
+    // Output pill
+    const btnSame = document.getElementById('btnOutSame');
+    const btnCust = document.getElementById('btnOutCustom');
+    if (state.outDir) {
+      btnSame.classList.remove('active');
+      btnCust.classList.add('active');
+      btnCust.textContent = '输出: ' + state.outDir;
+      btnCust.title = state.outDir;
+    } else {
+      btnSame.classList.add('active');
+      btnCust.classList.remove('active');
+      btnCust.textContent = '自定义输出目录';
+      btnCust.title = '';
+    }
+
+    // Queue list
+    const listEl = document.getElementById('queueList');
+    document.getElementById('queueCount').textContent = state.items.length + ' 项';
+
+    if (state.items.length === 0) {
+      listEl.innerHTML = '<div class="queue-empty">暂无图片，拖入或点击上方添加</div>';
+    } else {
+      listEl.innerHTML = state.items.map((it) => {
+        const sel = it.id === state.selectedId ? 'selected' : '';
+        const infoText = `${it.dims || '--'} · ${it.size_mb.toFixed(1)}MB` + (it.elapsed ? ` · ${it.elapsed.toFixed(1)}s` : '');
+        return `
+          <div class="q-item ${sel}" onclick="selectItem('${it.id}')" title="${escapeHtml(it.path)}">
+            <img class="q-thumb" src="/api/preview?id=${it.id}&kind=thumb" alt="" />
+            <div class="q-meta">
+              <div class="q-name">${escapeHtml(it.name)}</div>
+              <div class="q-sub">${infoText}</div>
+            </div>
+            <div class="q-right">
+              ${statusBadgeHtml(it)}
+              <div class="q-actions">
+                <button class="icon-btn" title="打开所在目录" onclick="openItemFolder('${it.id}', event)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button class="icon-btn del" title="从列表移除" onclick="removeItem('${it.id}', event)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // Progress & footer
+    const total = state.items.length;
+    const finished = state.items.filter(x => x.status === 'done' || x.status === 'skipped' || x.status === 'error').length;
+    const doneCnt = state.items.filter(x => x.status === 'done').length;
+    const queuedCnt = state.items.filter(x => x.status === 'queued').length;
+    const totalSec = state.items.reduce((acc, x) => acc + (x.elapsed || 0), 0);
+
+    document.getElementById('progFill').style.width = total > 0 ? ((finished / total) * 100) + '%' : '0%';
+    document.getElementById('statLeft').textContent = state.isRunning
+      ? `正在处理 (${finished}/${total})...`
+      : (total > 0 ? `成功 ${doneCnt} 张 · 耗时 ${totalSec.toFixed(1)}s` : '就绪');
+    document.getElementById('statRight').textContent = `${finished} / ${total}`;
+
+    const btnRun = document.getElementById('btnRunAll');
+    btnRun.disabled = state.isRunning || queuedCnt === 0;
+    btnRun.textContent = state.isRunning ? '正在去水印...' : (queuedCnt > 0 ? `开始处理 (${queuedCnt} 张)` : (total > 0 ? '全部处理完成' : '开始处理队列'));
+
+    renderStage();
+  }
+
+  function renderStage() {
+    const it = state.items.find(x => x.id === state.selectedId);
+    const welcome = document.getElementById('welcomeBox');
+    const wrap = document.getElementById('compareWrap');
+    const titleEl = document.getElementById('stageTitle');
+    const badgeEl = document.getElementById('stageBadge');
+    const detailEl = document.getElementById('stageDetail');
+    const btnOpenFile = document.getElementById('btnOpenFile');
+    const btnOpenDir = document.getElementById('btnOpenDir');
+
+    ['vmZoom', 'vmFull', 'vmClean', 'vmOrig'].forEach(id => document.getElementById(id).classList.remove('active'));
+    const modeMap = { zoom: 'vmZoom', full: 'vmFull', clean: 'vmClean', orig: 'vmOrig' };
+    document.getElementById(modeMap[state.viewMode]).classList.add('active');
+
+    if (!it) {
+      welcome.style.display = 'block';
+      wrap.style.display = 'none';
+      titleEl.textContent = '效果对比预览区';
+      badgeEl.style.display = 'none';
+      detailEl.textContent = '';
+      btnOpenFile.disabled = true;
+      btnOpenDir.disabled = true;
+      return;
+    }
+
+    welcome.style.display = 'none';
+    wrap.style.display = 'inline-flex';
+    titleEl.textContent = it.name;
+    badgeEl.style.display = 'inline-block';
+    badgeEl.className = 'badge ' + (
+      it.status === 'done' ? (it.mode === 'Mode-A' ? 'badge-mode-a' : 'badge-mode-b') :
+      it.status === 'processing' ? 'badge-processing' :
+      it.status === 'skipped' ? 'badge-skipped' :
+      it.status === 'error' ? 'badge-error' : 'badge-queued'
+    );
+    badgeEl.textContent =
+      it.status === 'done' ? (it.mode === 'Mode-A' ? 'Alpha 无损还原' : '模板匹配修复') :
+      it.status === 'processing' ? '处理中' :
+      it.status === 'skipped' ? '无水印跳过' :
+      it.status === 'error' ? '失败' : '等待中';
+
+    detailEl.textContent = it.detail || `${it.dims} · ${it.size_mb.toFixed(2)} MB`;
+    btnOpenFile.disabled = it.status !== 'done';
+    btnOpenDir.disabled = false;
+
+    const hasClean = it.status === 'done';
+    document.getElementById('vmClean').disabled = !hasClean;
+
+    const imgBase = document.getElementById('imgBase');
+    const imgOverlay = document.getElementById('imgOverlay');
+    const splitLine = document.getElementById('splitLine');
+    const splitHandle = document.getElementById('splitHandle');
+    const tagLeft = document.getElementById('tagLeft');
+    const tagRight = document.getElementById('tagRight');
+    const ver = it.version || 1;
+
+    const isCompare = (state.viewMode === 'zoom' || state.viewMode === 'full') && hasClean;
+    wrap.classList.toggle('single-mode', !isCompare);
+    splitLine.style.display = isCompare ? 'block' : 'none';
+    splitHandle.style.display = isCompare ? 'flex' : 'none';
+    tagLeft.style.display = isCompare ? 'block' : 'none';
+    tagRight.style.display = isCompare ? 'block' : 'none';
+
+    if (isCompare) {
+      const kBase = state.viewMode === 'zoom' ? 'clean_zoom' : 'clean_fit';
+      const kOver = state.viewMode === 'zoom' ? 'orig_zoom' : 'orig_fit';
+      const srcBase = `/api/preview?id=${it.id}&kind=${kBase}&v=${ver}`;
+      const srcOver = `/api/preview?id=${it.id}&kind=${kOver}&v=${ver}`;
+      if (imgBase.dataset.src !== srcBase) { imgBase.src = srcBase; imgBase.dataset.src = srcBase; }
+      if (imgOverlay.dataset.src !== srcOver) { imgOverlay.src = srcOver; imgOverlay.dataset.src = srcOver; }
+      imgOverlay.style.display = 'block';
+      wrap.style.setProperty('--split', state.splitPct.toFixed(2) + '%');
+    } else {
+      imgOverlay.style.display = 'none';
+      const kSingle = (state.viewMode === 'clean' && hasClean)
+        ? 'clean_fit'
+        : (state.viewMode === 'zoom' ? 'orig_zoom' : 'orig_fit');
+      const srcSingle = `/api/preview?id=${it.id}&kind=${kSingle}&v=${ver}`;
+      if (imgBase.dataset.src !== srcSingle) { imgBase.src = srcSingle; imgBase.dataset.src = srcSingle; }
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // Called from Python whenever state updates
+  window.__syncState = function(payload) {
+    state.items = payload.items || [];
+    state.outDir = payload.out_dir || null;
+    state.isRunning = !!payload.is_running;
+    if (!state.selectedId && state.items.length > 0) {
+      state.selectedId = state.items[0].id;
+    } else if (state.selectedId && !state.items.some(x => x.id === state.selectedId)) {
+      state.selectedId = state.items.length > 0 ? state.items[0].id : null;
+    }
+    if (payload.auto_select_id) {
+      state.selectedId = payload.auto_select_id;
+    }
+    if (payload.toast) showToast(payload.toast);
+    render();
+  };
+
+  let _initSynced = false;
+  window.addEventListener('pywebviewready', async () => {
+    if (!_initSynced && api()) {
+      _initSynced = true;
+      await api().request_initial_state();
+    }
+  });
+  setTimeout(async () => {
+    if (!_initSynced && api()) {
+      _initSynced = true;
+      await api().request_initial_state();
+    }
+  }, 400);
+</script>
+</body>
+</html>
