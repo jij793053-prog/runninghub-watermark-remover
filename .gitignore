@@ -6,11 +6,17 @@ __pycache__/
 venv/
 env/
 
-# PyInstaller build artifacts
+# PyInstaller & Android build artifacts
 build/
 dist/
 *.spec
 release_artifacts/
+android/build/
+android/local.properties
+*.apk
+*.idsig
+*.jks
+*.keystore
 
 # User outputs, test images & logs
 *_去水印.png
