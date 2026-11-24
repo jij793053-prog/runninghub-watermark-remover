@@ -22,8 +22,11 @@ import webview
 from PIL import Image
 from webview.dom import DOMEventHandler
 
-# Ensure module import works regardless of working directory
-APP_DIR = Path(__file__).resolve().parent
+# Ensure resource/module lookup works both from source and PyInstaller frozen EXE
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    APP_DIR = Path(sys._MEIPASS)
+else:
+    APP_DIR = Path(__file__).resolve().parent
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 

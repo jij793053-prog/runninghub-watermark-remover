@@ -6,6 +6,12 @@ __pycache__/
 venv/
 env/
 
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+release_artifacts/
+
 # User outputs, test images & logs
 *_去水印.png
 *.log

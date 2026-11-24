@@ -8,6 +8,7 @@ Universal RunningHub AI Watermark Remover
 
 import argparse
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -19,7 +20,15 @@ Image.MAX_IMAGE_PIXELS = None
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 SKIP_SUFFIX = "_去水印"
-TEMPLATE_PATH = Path(__file__).resolve().parent / "rh_template.png"
+
+
+def _resource_dir() -> Path:
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    return Path(__file__).resolve().parent
+
+
+TEMPLATE_PATH = _resource_dir() / "rh_template.png"
 
 
 def load_image_unicode(path: Path) -> tuple[np.ndarray, str]:

@@ -25,12 +25,21 @@ pip install -r requirements.txt
 
 ## 使用方式
 
-### 1. 桌面面板模式（推荐）
+### 1. 独立软件版（无需安装 Python，推荐普通用户）
+
+1. 前往仓库 **Releases** 页面下载 `RunningHubClearStudio.exe`（绿色免安装单文件，Win10/Win11 开箱即用）。
+2. 双击运行即可打开图形面板，把图片或文件夹直接拖进窗口，或直接把图片拖放到 `.exe` 图标上自动处理。
+
+### 2. 从源码启动面板
+
+```bash
+pip install -r requirements.txt
+```
 
 - 直接双击 [`去RunningHub水印.bat`](去RunningHub水印.bat) 启动图形面板（无终端窗口），把图片或文件夹拖进窗口即可自动处理。
 - 也可直接将图片或文件夹拖放到 `.bat` 文件上启动并自动加载处理。
 
-### 2. 命令行批量模式
+### 3. 命令行批量模式
 
 ```bash
 # 处理单张或多张图片
@@ -40,6 +49,15 @@ python remove_rh_watermark.py image1.png image2.jpg
 python remove_rh_watermark.py ./input_folder --out-dir ./output_folder
 ```
 
+### 4. 自行打包 EXE（可选）
+
+```bash
+pip install -r requirements.txt pyinstaller
+python build_exe.py
+```
+
+产物将生成在 `dist/RunningHubClearStudio.exe`。
+
 ## 文件说明
 
 | 文件 | 说明 |
@@ -48,6 +66,7 @@ python remove_rh_watermark.py ./input_folder --out-dir ./output_folder
 | `panel_ui.html` | 桌面面板前端界面与交互式前后对比滑块 |
 | `remove_rh_watermark.py` | Mode-A / Mode-B 去水印核心算法及命令行入口 |
 | `rh_template.png` | 标准 RunningHub AI 水印归一化灰度模板 |
+| `build_exe.py` | PyInstaller 单文件绿色版 EXE 打包脚本 |
 | `去RunningHub水印.bat` | Windows 无黑框一键启动脚本 |
 | `app.ico` | 应用图标 |
 
