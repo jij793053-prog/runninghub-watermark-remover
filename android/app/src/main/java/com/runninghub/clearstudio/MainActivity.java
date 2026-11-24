@@ -4,17 +4,22 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ColorSpace;
 import android.graphics.Insets;
+import android.graphics.Typeface;
 import android.media.ExifInterface;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -25,20 +30,28 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -52,6 +65,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,7 +83,10 @@ public class MainActivity extends Activity {
     private static final String VIRTUAL_SCHEME = "http";
     private static final String VIRTUAL_HOST = "appassets.local";
     private static final String ENTRY_URL = VIRTUAL_SCHEME + "://" + VIRTUAL_HOST + "/www/index.html";
-    private static final String APP_VERSION = "1.0.0";
+    private static final String APP_VERSION = "1.1.1";
+    private static final String PREFS_DIAG = "clearstudio_diag";
+    private static final String KEY_LAST_CRASH = "last_crash";
+    private static volatile boolean crashHandlerInstalled = false;
     private static final int PICK_IMAGES_CODE = 1001;
     private static final int WRITE_PERM_CODE = 2001;
     private static final int BG_DARK = 0xFF090B10;
@@ -126,31 +144,174 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        installCrashRecorder();
         setupEdgeToEdge();
-        cleanupOldCache();
 
-        rootLayout = new FrameLayout(this);
-        rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        rootLayout.setBackgroundColor(BG_DARK);
+        String prevCrash = consumeLastCrash();
+        if (prevCrash != null && !prevCrash.isEmpty()) {
+            showCrashScreen(prevCrash, true);
+            return;
+        }
 
-        webView = new WebView(this);
-        webView.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        webView.setBackgroundColor(BG_DARK);
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        webView.setVerticalScrollBarEnabled(false);
-        webView.setHorizontalScrollBarEnabled(false);
+        initMainUi();
+    }
 
-        configureWebView(webView);
-        rootLayout.addView(webView);
-        setContentView(rootLayout);
-        setupWindowInsets();
+    private void initMainUi() {
+        try {
+            cleanupOldCache();
+        } catch (Throwable ignored) {
+        }
 
-        handleIncomingIntent(getIntent());
-        webView.loadUrl(ENTRY_URL);
+        try {
+            rootLayout = new FrameLayout(this);
+            rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            rootLayout.setBackgroundColor(BG_DARK);
+
+            webView = new WebView(this);
+            webView.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            webView.setBackgroundColor(BG_DARK);
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
+
+            configureWebView(webView);
+            rootLayout.addView(webView);
+            setContentView(rootLayout);
+            applyDarkSystemBars();
+            setupWindowInsets();
+
+            try {
+                handleIncomingIntent(getIntent());
+            } catch (Throwable ignored) {
+            }
+            webView.loadUrl(ENTRY_URL);
+        } catch (Throwable t) {
+            showCrashScreen(stackTraceOf(t), false);
+        }
+    }
+
+    private void installCrashRecorder() {
+        if (crashHandlerInstalled) return;
+        synchronized (MainActivity.class) {
+            if (crashHandlerInstalled) return;
+            final Context appCtx = getApplicationContext();
+            final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+            Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+                try {
+                    String trace = "Thread: " + (thread != null ? thread.getName() : "?")
+                            + "\nSDK: " + Build.VERSION.SDK_INT + " (" + Build.MODEL + ")\n\n"
+                            + stackTraceOf(throwable);
+                    SharedPreferences prefs = appCtx.getSharedPreferences(PREFS_DIAG, Context.MODE_PRIVATE);
+                    prefs.edit().putString(KEY_LAST_CRASH, trace).commit();
+                } catch (Throwable ignored) {
+                }
+                if (prev != null) {
+                    prev.uncaughtException(thread, throwable);
+                }
+            });
+            crashHandlerInstalled = true;
+        }
+    }
+
+    private String consumeLastCrash() {
+        try {
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_DIAG, Context.MODE_PRIVATE);
+            String val = prefs.getString(KEY_LAST_CRASH, null);
+            if (val != null) {
+                prefs.edit().remove(KEY_LAST_CRASH).commit();
+            }
+            return val;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static String stackTraceOf(Throwable t) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        if (t != null) {
+            t.printStackTrace(pw);
+        } else {
+            pw.print("Unknown error");
+        }
+        pw.flush();
+        return sw.toString();
+    }
+
+    private void showCrashScreen(String trace, boolean allowContinue) {
+        try {
+            int pad = dpToPx(16);
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setBackgroundColor(BG_DARK);
+            box.setPadding(pad, dpToPx(44), pad, dpToPx(24));
+
+            TextView title = new TextView(this);
+            title.setText(allowContinue ? "检测到上次启动异常" : "界面初始化异常");
+            title.setTextColor(0xFFEEF2F8);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            box.addView(title);
+
+            TextView sub = new TextView(this);
+            sub.setText("请截图或复制下方堆栈信息反馈排查（版本 " + APP_VERSION + "）");
+            sub.setTextColor(0xFF9AA5BA);
+            sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            sub.setPadding(0, dpToPx(6), 0, dpToPx(12));
+            box.addView(sub);
+
+            LinearLayout btnRow = new LinearLayout(this);
+            btnRow.setOrientation(LinearLayout.HORIZONTAL);
+            btnRow.setGravity(Gravity.START);
+            btnRow.setPadding(0, 0, 0, dpToPx(12));
+
+            Button copyBtn = new Button(this);
+            copyBtn.setText("复制错误日志");
+            copyBtn.setOnClickListener(v -> {
+                try {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("clearstudio_crash", trace));
+                        Toast.makeText(MainActivity.this, "已复制错误日志", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Throwable ignored) {
+                }
+            });
+            btnRow.addView(copyBtn);
+
+            if (allowContinue) {
+                Button retryBtn = new Button(this);
+                retryBtn.setText("继续进入应用");
+                retryBtn.setOnClickListener(v -> initMainUi());
+                btnRow.addView(retryBtn);
+            }
+            box.addView(btnRow);
+
+            ScrollView sv = new ScrollView(this);
+            sv.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+            TextView tv = new TextView(this);
+            tv.setText(trace);
+            tv.setTextColor(0xFFFCA5A5);
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            tv.setTypeface(Typeface.MONOSPACE);
+            tv.setTextIsSelectable(true);
+            sv.addView(tv);
+            box.addView(sv);
+
+            setContentView(box);
+            applyDarkSystemBars();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * Math.max(1.0f, density));
     }
 
     @Override
@@ -158,6 +319,34 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleIncomingIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.onResume();
+        }
+        if (rootLayout != null) {
+            rootLayout.requestApplyInsets();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        if (webView != null) {
+            webView.onPause();
+        }
+        super.onPause();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        applyDarkSystemBars();
+        if (rootLayout != null) {
+            rootLayout.requestApplyInsets();
+        }
     }
 
     @Override
@@ -185,42 +374,82 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     private void setupEdgeToEdge() {
-        Window window = getWindow();
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
-                | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
-        window.setStatusBarColor(Color.TRANSPARENT);
-        window.setNavigationBarColor(Color.TRANSPARENT);
+        try {
+            Window window = getWindow();
+            if (window == null) return;
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
+                    | WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+            window.setStatusBarColor(Color.TRANSPARENT);
+            window.setNavigationBarColor(Color.TRANSPARENT);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WindowManager.LayoutParams lp = window.getAttributes();
-            lp.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            window.setAttributes(lp);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                WindowManager.LayoutParams lp = window.getAttributes();
+                lp.layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                window.setAttributes(lp);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.setStatusBarContrastEnforced(false);
+                window.setNavigationBarContrastEnforced(false);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(false);
+            } else {
+                View decor = window.getDecorView();
+                if (decor != null) {
+                    decor.setSystemUiVisibility(
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+                }
+            }
+        } catch (Throwable ignored) {
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.setStatusBarContrastEnforced(false);
-            window.setNavigationBarContrastEnforced(false);
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false);
-            WindowInsetsController ctrl = window.getInsetsController();
-            if (ctrl != null) {
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyDarkSystemBars() {
+        try {
+            Window window = getWindow();
+            if (window == null) return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController ctrl = window.getInsetsController();
                 int mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                         | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
-                ctrl.setSystemBarsAppearance(0, mask);
+                if (ctrl != null) {
+                    ctrl.setSystemBarsAppearance(0, mask);
+                } else {
+                    View decor = window.getDecorView();
+                    if (decor != null) {
+                        decor.post(() -> {
+                            try {
+                                WindowInsetsController c = window.getInsetsController();
+                                if (c != null) {
+                                    c.setSystemBarsAppearance(0, mask);
+                                }
+                            } catch (Throwable ignored) {
+                            }
+                        });
+                    }
+                }
+            } else {
+                View decor = window.getDecorView();
+                if (decor != null) {
+                    decor.setSystemUiVisibility(
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+                }
             }
-        } else {
-            window.getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        } catch (Throwable ignored) {
         }
     }
 
     @SuppressWarnings("deprecation")
     private void setupWindowInsets() {
         rootLayout.setOnApplyWindowInsetsListener((v, insets) -> {
+            if (insets == null) return null;
             int topPx = 0;
             int bottomPx = 0;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -237,8 +466,12 @@ public class MainActivity extends Activity {
             lastSentTopCss = topCss;
             lastSentBottomCss = bottomCss;
             pushSafeInsetsToWeb(topCss, bottomCss);
-            return insets;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                return WindowInsets.CONSUMED;
+            }
+            return insets.consumeSystemWindowInsets();
         });
+        rootLayout.requestApplyInsets();
     }
 
     private void pushSafeInsetsToWeb(int topCss, int bottomCss) {
@@ -253,21 +486,32 @@ public class MainActivity extends Activity {
         });
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
+    @SuppressWarnings("deprecation")
     private void configureWebView(WebView wv) {
         WebSettings s = wv.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
         s.setAllowFileAccess(false);
-        s.setAllowContentAccess(false);
+        s.setAllowContentAccess(true);
         s.setAllowFileAccessFromFileURLs(false);
         s.setAllowUniversalAccessFromFileURLs(false);
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         s.setSupportZoom(false);
         s.setTextZoom(100);
-        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        try {
+            CookieManager cm = CookieManager.getInstance();
+            cm.setAcceptCookie(true);
+            cm.setAcceptThirdPartyCookies(wv, false);
+        } catch (Throwable ignored) {
+        }
 
         wv.addJavascriptInterface(new AndroidBridge(this), "AndroidBridge");
         wv.setWebChromeClient(new WebChromeClient());
@@ -297,6 +541,11 @@ public class MainActivity extends Activity {
                     && VIRTUAL_HOST.equalsIgnoreCase(uri.getHost())) {
                 return false;
             }
+            return true;
+        }
+
+        @Override
+        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
             return true;
         }
 

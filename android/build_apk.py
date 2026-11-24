@@ -35,8 +35,8 @@ KEY_DNAME = "CN=RunningHub Clear Studio, OU=Mobile, O=RunningHub Clear Studio, L
 
 MIN_SDK = "26"
 TARGET_SDK = "34"
-VERSION_CODE = "1"
-VERSION_NAME = "1.0.0"
+VERSION_CODE = "2"
+VERSION_NAME = "1.1.1"
 
 
 def _version_tuple(name: str) -> tuple[int, ...]:
